@@ -19,7 +19,11 @@ _cgo_export.*
 
 _testmain.go
 
+ml
+
 *.exe
 *.test
 *.prof
+*.png
+*.txt
 ml-in-go-examples

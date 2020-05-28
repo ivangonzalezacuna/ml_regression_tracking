@@ -6,11 +6,25 @@ import (
 
 	"github.com/cdipaolo/goml/base"
 	"github.com/cdipaolo/goml/linear"
-	"gonum.org/v1/plot"
-	"gonum.org/v1/plot/plotter"
-	"gonum.org/v1/plot/plotutil"
-	"gonum.org/v1/plot/vg"
+
+	log "github.com/sirupsen/logrus"
 )
+
+// Model is the best model for the training data set
+var maxAccuracyModel *linear.Logistic
+var maxAccuracyDb float64
+var maxAccuracyIter int
+var maxAccuracy float64
+var maxAccuracyCM *ConfusionMatrix
+
+//Train & Test data
+var xTrain [][]float64
+var yTrain []float64
+var xTest [][]float64
+var yTest []float64
+
+//Prediction data
+var xPrediction [][]float64
 
 // ConfusionMatrix describes a confusion matrix
 type ConfusionMatrix struct {
@@ -30,24 +44,60 @@ func (cm ConfusionMatrix) String() string {
 		cm.positive, cm.negative, cm.truePositive, cm.trueNegative, cm.falsePositive, cm.falseNegative, cm.recall, cm.precision, cm.accuracy)
 }
 
-// Run executes this example
-func Run() error {
-	fmt.Println("Running Logistic Regression...")
-	// Load data set
-	xTrain, yTrain, err := base.LoadDataFromCSV("./data/trackDataTrain.csv")
-	if err != nil {
-		return err
-	}
-	xTest, yTest, err := base.LoadDataFromCSV("./data/trackDataTrain.csv")
-	if err != nil {
-		return err
-	}
+// InitLogisticRegression to init the log
+func InitLogisticRegression() {
+	log.SetLevel(log.DebugLevel)
+}
 
-	var maxAccuracy float64
-	var maxAccuracyCM *ConfusionMatrix
-	var maxAccuracyDb float64
-	var maxAccuracyIter int
-	var maxAccuracyModel *linear.Logistic
+// LoadTrainData loads the CSV files for training and testing to find the best Model
+func LoadTrainData(trainFilePath, testFilePath string) error {
+	log.Infof("Loading Train & Test data from CSV files...")
+	var err error
+	xTrain, yTrain, err = base.LoadDataFromCSV(trainFilePath)
+	if err != nil {
+		return err
+	}
+	xTest, yTest, err = base.LoadDataFromCSV(testFilePath)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// LoadPredictionData loads the CSV file in order to make a prediction
+func LoadPredictionData(predictionPath string) error {
+	log.Infof("Loading Predicition data from CSV file...")
+	var err error
+	xPrediction, _, err = base.LoadDataFromCSV(predictionPath)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// MakePrediction makes a prediction of a list of data
+func MakePrediction() ([]int, error) {
+	log.Infof("Making new prediction based on collected data...")
+	var finalPrediction []int
+
+	for i := range xPrediction {
+		prediction, err := maxAccuracyModel.Predict(xPrediction[i])
+		if err != nil {
+			return nil, err
+		}
+		if prediction[0] >= maxAccuracyDb {
+			finalPrediction = append(finalPrediction, 1)
+		} else {
+			finalPrediction = append(finalPrediction, 0)
+		}
+	}
+	return finalPrediction, nil
+}
+
+// CreateBestModel executes a loop in order to find the most accurate model
+func CreateBestModel(filePath string) error {
+	log.Infof("Searching for the best Logistic Regression Model...")
+	var err error
 
 	//Try different parameters to get the best model
 	for iter := 100; iter < 3300; iter += 500 {
@@ -66,52 +116,58 @@ func Run() error {
 		}
 	}
 
-	fmt.Printf("Maximum accuracy: %.2f\n\n", maxAccuracy)
-	fmt.Printf("with Model: %s\n\n", maxAccuracyModel)
-	fmt.Printf("with Confusion Matrix:\n%s\n\n", maxAccuracyCM)
-	fmt.Printf("with Decision Boundary: %.2f\n", maxAccuracyDb)
-	fmt.Printf("with Num Iterations: %d\n", maxAccuracyIter)
+	log.Debugf("Maximum accuracy: %.2f", maxAccuracy)
+	// log.Debugf("with Model: %s\n\n", maxAccuracyModel)
+	// log.Debugf("with Confusion Matrix:\n%s\n\n", maxAccuracyCM)
+	log.Debugf("with Decision Boundary: %.2f", maxAccuracyDb)
+	log.Debugf("with Num Iterations: %d", maxAccuracyIter)
 
-	if err := plotData(xTrain, yTrain); err != nil {
+	// if err := plotData(xTrain, yTrain); err != nil {
+	// 	return err
+	// }
+
+	// Save model to file
+	err = maxAccuracyModel.PersistToFile(filePath)
+	if err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func plotData(xTest [][]float64, yTest []float64) error {
-	p, err := plot.New()
-	if err != nil {
-		return err
-	}
-	p.Title.Text = "Tracking Results"
-	p.X.Label.Text = "X"
-	p.Y.Label.Text = "Y"
-	p.X.Max = 120
-	p.Y.Max = 120
+// func plotData(xTest [][]float64, yTest []float64) error {
+// 	p, err := plot.New()
+// 	if err != nil {
+// 		return err
+// 	}
+// 	p.Title.Text = "Tracking Results"
+// 	p.X.Label.Text = "X"
+// 	p.Y.Label.Text = "Y"
+// 	p.X.Max = 120
+// 	p.Y.Max = 120
 
-	positives := make(plotter.XYs, len(yTest))
-	negatives := make(plotter.XYs, len(yTest))
-	for i := range xTest {
-		if yTest[i] == 1.0 {
-			positives[i].X = xTest[i][0]
-			positives[i].Y = xTest[i][1]
-		}
-		if yTest[i] == 0.0 {
-			negatives[i].X = xTest[i][0]
-			negatives[i].Y = xTest[i][1]
-		}
-	}
+// 	positives := make(plotter.XYs, len(yTest))
+// 	negatives := make(plotter.XYs, len(yTest))
+// 	for i := range xTest {
+// 		if yTest[i] == 1.0 {
+// 			positives[i].X = xTest[i][0]
+// 			positives[i].Y = xTest[i][1]
+// 		}
+// 		if yTest[i] == 0.0 {
+// 			negatives[i].X = xTest[i][0]
+// 			negatives[i].Y = xTest[i][1]
+// 		}
+// 	}
 
-	err = plotutil.AddScatters(p, "Negatives", negatives, "Positives", positives)
-	if err != nil {
-		return err
-	}
-	if err := p.Save(10*vg.Inch, 10*vg.Inch, "result.png"); err != nil {
-		return err
-	}
-	return nil
-}
+// 	err = plotutil.AddScatters(p, "Negatives", negatives, "Positives", positives)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	if err := p.Save(10*vg.Inch, 10*vg.Inch, "result.png"); err != nil {
+// 		return err
+// 	}
+// 	return nil
+// }
 
 func tryValues(learningRate float64, regularization float64, iterations int, decisionBoundary float64, xTrain, xTest [][]float64, yTrain, yTest []float64) (*ConfusionMatrix, *linear.Logistic, error) {
 	cm := ConfusionMatrix{}
