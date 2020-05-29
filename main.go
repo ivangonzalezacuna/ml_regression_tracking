@@ -1,44 +1,32 @@
 package main
 
 import (
-	"fmt"
-	"os"
-	"path/filepath"
-
-	logReg "ml/logisticregression"
+	ml "ml/logisticregression"
 
 	log "github.com/sirupsen/logrus"
 )
 
-var dirPath string
-
 func init() {
 	log.SetLevel(log.DebugLevel)
-	var err error
-	dirPath, err = filepath.Abs(filepath.Dir(os.Args[0]))
-	if err != nil {
-		log.Errorf(err.Error())
-	}
-	dirPath = fmt.Sprintf("%v/model.txt", dirPath)
 }
 
 func main() {
-	logReg.InitLogisticRegression()
-	err := logReg.LoadTrainData("./data/trackDataTrain.csv", "./data/trackDataTrain.csv")
+	err := ml.LoadTrainData("./data/trackDataTrain.csv", "./data/trackDataTrain.csv")
 	if err != nil {
 		log.Errorf(err.Error())
 	}
 
-	err = logReg.CreateBestModel(dirPath)
+	err = ml.CreateBestModel()
 	if err != nil {
 		log.Errorf(err.Error())
 	}
 
-	err = logReg.LoadPredictionData("./data/trackDataTrain.csv")
+	predicData, err := ml.LoadPredictionDataFromCSV("./data/trackDataTest.csv")
 	if err != nil {
 		log.Errorf(err.Error())
 	}
-	prediction, err := logReg.MakePrediction()
+
+	prediction, err := ml.MakePrediction(predicData)
 	if err != nil {
 		log.Errorf(err.Error())
 	}
