@@ -11,7 +11,7 @@ func init() {
 }
 
 func main() {
-	err := ml.LoadTrainData("./data/trackDataTrain.csv", "./data/trackDataTrain.csv")
+	err := ml.LoadTrainDataFromCSV("./data/trackDataTrain.csv", "./data/trackDataTrain.csv")
 	if err != nil {
 		log.Errorf(err.Error())
 	}

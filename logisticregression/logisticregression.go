@@ -41,10 +41,11 @@ func (cm ConfusionMatrix) String() string {
 		cm.positive, cm.negative, cm.truePositive, cm.trueNegative, cm.falsePositive, cm.falseNegative, cm.recall, cm.precision, cm.accuracy)
 }
 
-// LoadTrainData loads the CSV files for training and testing to find the best Model
-func LoadTrainData(trainFilePath, testFilePath string) error {
+// LoadTrainDataFromCSV loads the CSV files for training and testing to find the best Model
+func LoadTrainDataFromCSV(trainFilePath, testFilePath string) error {
 	log.Infof("Loading Train & Test data from CSV files...")
 	var err error
+	xTrain, yTrain, xTest, yTest = nil, nil, nil, nil
 	xTrain, yTrain, err = base.LoadDataFromCSV(trainFilePath)
 	if err != nil {
 		return err
@@ -53,6 +54,46 @@ func LoadTrainData(trainFilePath, testFilePath string) error {
 	if err != nil {
 		return err
 	}
+	return nil
+}
+
+// LoadTrainDataRaw loads the CSV files for training and testing to find the best Model
+func LoadTrainDataRaw(trainData, testData [][]float64) error {
+	log.Infof("Loading Train & Test data from 2D float64 array...")
+	if len(trainData) == 0 || len(testData) == 0 {
+		return fmt.Errorf("Received empty dataset")
+	}
+
+	trainSize := len(trainData[0])
+	for _, v := range trainData {
+		if trainSize != len(v) {
+			return fmt.Errorf("Train dataset size mismatch")
+		}
+	}
+
+	testSize := len(testData[0])
+	for _, v := range testData {
+		if testSize != len(v) {
+			return fmt.Errorf("Test dataset size mismatch")
+		}
+	}
+
+	if trainSize != testSize {
+		return fmt.Errorf("Train & Test datasets have different sizes")
+	}
+
+	xTrain, yTrain, xTest, yTest = nil, nil, nil, nil
+
+	for _, v := range trainData {
+		xTrain = append(xTrain, v[:trainSize-1])
+		yTrain = append(yTrain, v[trainSize-1])
+	}
+
+	for _, v := range testData {
+		xTest = append(xTest, v[:testSize-1])
+		yTest = append(yTest, v[testSize-1])
+	}
+
 	return nil
 }
 
@@ -71,11 +112,23 @@ func LoadPredictionDataFromCSV(predictionPath string) ([][]float64, error) {
 func MakePrediction(xPrediction [][]float64) ([]int, error) {
 	log.Infof("Making new prediction based on collected data...")
 	var finalPrediction []int
+	trainDataSize := len(maxAccuracyModel.Theta()) - 1
 
-	trainDataSize := xTrain[0]
+	if len(xPrediction) == 0 {
+		return nil, fmt.Errorf("Empty prediction dataset")
+	}
+
+	log.Debugf("Model size: %v", trainDataSize)
+	log.Debugf("Prediction data size: %v", len(xPrediction[0]))
+
+	for _, v := range xPrediction {
+		if len(v) != trainDataSize {
+			return nil, fmt.Errorf("Prediction dataset has different size than Train dataset")
+		}
+	}
 
 	for i := range xPrediction {
-		if len(trainDataSize) != len(xPrediction[i]) {
+		if trainDataSize != len(xPrediction[i]) {
 			return nil, fmt.Errorf("Trained data and prediction data size mismatch")
 		}
 		prediction, err := maxAccuracyModel.Predict(xPrediction[i])
