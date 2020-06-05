@@ -11,22 +11,24 @@ func init() {
 }
 
 func main() {
-	err := ml.LoadTrainDataFromCSV("./data/trackDataTrain.csv", "./data/trackDataTrain.csv")
+	trainData, err := ml.LoadTrainDataFromCSV("./data/trackDataTrain.csv", "./data/trackDataTrain.csv")
 	if err != nil {
 		log.Errorf(err.Error())
 	}
 
-	err = ml.CreateBestModel()
+	trainModel, err := trainData.CreateBestModel()
 	if err != nil {
 		log.Errorf(err.Error())
 	}
 
-	predicData, err := ml.LoadPredictionDataFromCSV("./data/trackDataTest.csv")
+	log.Debugf("ModelData: %#v", trainModel)
+
+	predicData, err := ml.LoadPredictionDataFromCSV("./data/trackDataTrain.csv")
 	if err != nil {
 		log.Errorf(err.Error())
 	}
 
-	prediction, err := ml.MakePrediction(predicData)
+	prediction, err := trainModel.MakePrediction(predicData)
 	if err != nil {
 		log.Errorf(err.Error())
 	}
