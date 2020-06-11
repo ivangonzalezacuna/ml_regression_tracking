@@ -112,10 +112,13 @@ func LoadPredictionDataFromCSV(predictionPath string) ([][]float64, error) {
 
 // MakePrediction makes a prediction using a trained model and an input data
 func (m *ModelData) MakePrediction(xPrediction [][]float64) ([]int, error) {
+	if m.Model == nil {
+		return nil, fmt.Errorf("Can't make a prediction based on nil Model")
+	}
+
 	log.Infof("Making new prediction based on collected data...")
 	var finalPrediction []int
 	trainDataSize := len(m.Model.Theta()) - 1
-
 	if len(xPrediction) == 0 {
 		return nil, fmt.Errorf("Empty prediction dataset")
 	}
