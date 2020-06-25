@@ -45,7 +45,6 @@ type (
 func LoadTrainDataFromCSV(trainFilePath, testFilePath string) (TrainData, error) {
 	log.Infof("Loading Train & Test data from CSV files...")
 	var err error
-	// xTrain, yTrain, xTest, yTest = nil, nil, nil, nil
 	xTrain, yTrain, err := base.LoadDataFromCSV(trainFilePath)
 	if err != nil {
 		return TrainData{}, err
@@ -55,7 +54,7 @@ func LoadTrainDataFromCSV(trainFilePath, testFilePath string) (TrainData, error)
 		return TrainData{}, err
 	}
 
-	return TrainData{xTrain: xTrain, yTrain: yTrain, xTest: xTest, yTest: yTest}, nil
+	return TrainData{xTrain, yTrain, xTest, yTest}, nil
 }
 
 // LoadTrainDataRaw loads the train & test data directly from 2D float64 arrays
@@ -96,18 +95,7 @@ func LoadTrainDataRaw(trainData, testData [][]float64) (TrainData, error) {
 		yTest = append(yTest, v[testSize-1])
 	}
 
-	return TrainData{xTrain: xTrain, yTrain: yTrain, xTest: xTest, yTest: yTest}, nil
-}
-
-// LoadPredictionDataFromCSV loads the CSV file in order to make a prediction. Maybe we don't even need this
-func LoadPredictionDataFromCSV(predictionPath string) ([][]float64, error) {
-	log.Infof("Loading Predicition data from CSV file...")
-	var err error
-	xPrediction, _, err := base.LoadDataFromCSV(predictionPath)
-	if err != nil {
-		return nil, err
-	}
-	return xPrediction, nil
+	return TrainData{xTrain, yTrain, xTest, yTest}, nil
 }
 
 // MakePrediction makes a prediction using a trained model and an input data
@@ -176,7 +164,7 @@ func (t *TrainData) CreateBestModel() (ModelData, error) {
 		}
 	}
 
-	m := ModelData{Model: maxAccuracyModel, DecissionBoundary: maxAccuracyDb, Iterations: maxAccuracyIter, Accuracy: maxAccuracy, ConfusionMatrix: maxAccuracyCM}
+	m := ModelData{maxAccuracyModel, maxAccuracyDb, maxAccuracyIter, maxAccuracy, maxAccuracyCM}
 
 	return m, nil
 }
