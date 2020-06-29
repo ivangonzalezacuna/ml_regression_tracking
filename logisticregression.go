@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"os/user"
 	"path"
 
 	"github.com/cdipaolo/goml/base"
@@ -141,7 +142,7 @@ func (m *ModelData) MakePrediction(xPrediction [][]float64) ([]int, error) {
 }
 
 func readConfig() {
-	userDir, err := osUser.Current()
+	userDir, err := user.Current()
 	if err != nil {
 		log.Errorf(err.Error())
 	}
@@ -171,7 +172,7 @@ func (t *TrainData) CreateBestModel() (ModelData, error) {
 	viper.SetDefault("ml.iterations", -1)
 	iter := viper.GetInt("ml.iterations")
 	viper.SetDefault("ml.decissionBoundary", -1)
-	db := viper.GetInt("ml.decissionBoundary")
+	db := viper.GetFloat("ml.decissionBoundary")
 
 	var maxAccuracyModel *linear.Logistic
 	var maxAccuracyDb float64
