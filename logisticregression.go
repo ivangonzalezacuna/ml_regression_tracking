@@ -171,8 +171,8 @@ func (t *TrainData) CreateBestModel() (ModelData, error) {
 	readConfig()
 	viper.SetDefault("ml.iterations", -1)
 	iter := viper.GetInt("ml.iterations")
-	viper.SetDefault("ml.decissionBoundary", -1)
-	db := viper.GetFloat("ml.decissionBoundary")
+	viper.SetDefault("ml.decissionBoundary", 0)
+	db := viper.GetFloat64("ml.decissionBoundary")
 
 	var maxAccuracyModel *linear.Logistic
 	var maxAccuracyDb float64
@@ -180,7 +180,7 @@ func (t *TrainData) CreateBestModel() (ModelData, error) {
 	var maxAccuracy float64
 	var maxAccuracyCM confusionMatrix
 
-	if iterations != -1 && db != -1 {
+	if iter != -1 && db != -1 {
 		cm, model, err := findBestModel(0.0001, 0.0, iter, db, t.xTrain, t.xTest, t.yTrain, t.yTest)
 		if err != nil {
 			return ModelData{}, err
