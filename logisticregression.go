@@ -156,12 +156,16 @@ func readConfig() {
 		}
 	}
 
-	cfgFile := path.Join(configDir, "config.toml")
-	viper.SetConfigFile(cfgFile)
+	cfgFileDir := path.Join(configDir, "config.toml")
+	_, err = os.OpenFile("access.log", os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		log.Fatal(err)
+	}
+	viper.SetConfigFile(cfgFileDir)
 	if err := viper.ReadInConfig(); err != nil {
-		log.Errorf("[Init] Unable to read config from file %s: %s", cfgFile, err.Error())
+		log.Errorf("[Init] Unable to read config from file %s: %s", cfgFileDir, err.Error())
 	} else {
-		log.Infof("[Init] Read configuration from file %s", cfgFile)
+		log.Infof("[Init] Read configuration from file %s", cfgFileDir)
 	}
 }
 
@@ -189,8 +193,8 @@ func (t *TrainData) CreateBestModel() (ModelData, error) {
 	}
 
 	//Try different parameters to get the best model
-	for iter = 100; iter < 3300; iter += 500 {
-		for db = 0.05; db < 1.0; db += 0.01 {
+	for iter := 100; iter < 3300; iter += 500 {
+		for db := 0.05; db < 1.0; db += 0.01 {
 			cm, model, err := findBestModel(0.0001, 0.0, iter, db, t.xTrain, t.xTest, t.yTrain, t.yTest)
 			if err != nil {
 				return ModelData{}, err
@@ -205,13 +209,11 @@ func (t *TrainData) CreateBestModel() (ModelData, error) {
 		}
 	}
 
-	viper.Set("ml.iterations", iter)
-	viper.Set("ml.decissionBoundary", db)
+	viper.Set("ml.iterations", maxAccuracyIter)
+	viper.Set("ml.decissionBoundary", maxAccuracyDb)
 	viper.WriteConfig()
 
-	m := ModelData{maxAccuracyModel, maxAccuracyDb, maxAccuracyIter, maxAccuracy, maxAccuracyCM}
-
-	return m, nil
+	return ModelData{maxAccuracyModel, maxAccuracyDb, maxAccuracyIter, maxAccuracy, maxAccuracyCM}, nil
 }
 
 func findBestModel(learningRate float64, regularization float64, iterations int, decisionBoundary float64, xTrain, xTest [][]float64, yTrain, yTest []float64) (confusionMatrix, *linear.Logistic, error) {
