@@ -169,7 +169,7 @@ func (t *TrainData) CreateBestModel() (ModelData, error) {
 	log.Infof("Looking for the best Logistic Regression Model...")
 	readConfig()
 	viper.SetDefault("ml.iterations", -1)
-	iterations := viper.GetInt("ml.iterations")
+	iter := viper.GetInt("ml.iterations")
 	viper.SetDefault("ml.decissionBoundary", -1)
 	db := viper.GetInt("ml.decissionBoundary")
 
@@ -188,8 +188,8 @@ func (t *TrainData) CreateBestModel() (ModelData, error) {
 	}
 
 	//Try different parameters to get the best model
-	for iter := 100; iter < 3300; iter += 500 {
-		for db := 0.05; db < 1.0; db += 0.01 {
+	for iter = 100; iter < 3300; iter += 500 {
+		for db = 0.05; db < 1.0; db += 0.01 {
 			cm, model, err := findBestModel(0.0001, 0.0, iter, db, t.xTrain, t.xTest, t.yTrain, t.yTest)
 			if err != nil {
 				return ModelData{}, err
@@ -203,6 +203,10 @@ func (t *TrainData) CreateBestModel() (ModelData, error) {
 			}
 		}
 	}
+
+	viper.Set("ml.iterations", iter)
+	viper.Set("ml.decissionBoundary", db)
+	viper.WriteConfig()
 
 	m := ModelData{maxAccuracyModel, maxAccuracyDb, maxAccuracyIter, maxAccuracy, maxAccuracyCM}
 
