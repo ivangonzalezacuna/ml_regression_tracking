@@ -3,11 +3,14 @@ package logisticregression
 import (
 	"fmt"
 	"io/ioutil"
+	"os"
+	"path"
 
 	"github.com/cdipaolo/goml/base"
 	"github.com/cdipaolo/goml/linear"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 )
 
 type (
@@ -137,15 +140,52 @@ func (m *ModelData) MakePrediction(xPrediction [][]float64) ([]int, error) {
 	return finalPrediction, nil
 }
 
+func readConfig() {
+	userDir, err := osUser.Current()
+	if err != nil {
+		log.Errorf(err.Error())
+	}
+
+	configDir := path.Join(userDir.HomeDir, ".config", "ml-system")
+	_, err = os.Stat(configDir)
+	if os.IsNotExist(err) {
+		errDir := os.MkdirAll(configDir, 0755)
+		if errDir != nil {
+			log.Errorf(err.Error())
+		}
+	}
+
+	cfgFile := path.Join(configDir, "config.toml")
+	viper.SetConfigFile(cfgFile)
+	if err := viper.ReadInConfig(); err != nil {
+		log.Errorf("[Init] Unable to read config from file %s: %s", cfgFile, err.Error())
+	} else {
+		log.Infof("[Init] Read configuration from file %s", cfgFile)
+	}
+}
+
 // CreateBestModel executes a loop in order to find the most accurate model
 func (t *TrainData) CreateBestModel() (ModelData, error) {
 	log.Infof("Looking for the best Logistic Regression Model...")
+	readConfig()
+	viper.SetDefault("ml.iterations", -1)
+	iterations := viper.GetInt("ml.iterations")
+	viper.SetDefault("ml.decissionBoundary", -1)
+	db := viper.GetInt("ml.decissionBoundary")
 
 	var maxAccuracyModel *linear.Logistic
 	var maxAccuracyDb float64
 	var maxAccuracyIter int
 	var maxAccuracy float64
 	var maxAccuracyCM confusionMatrix
+
+	if iterations != -1 && db != -1 {
+		cm, model, err := findBestModel(0.0001, 0.0, iter, db, t.xTrain, t.xTest, t.yTrain, t.yTest)
+		if err != nil {
+			return ModelData{}, err
+		}
+		return ModelData{model, db, iter, cm.accuracy, cm}, nil
+	}
 
 	//Try different parameters to get the best model
 	for iter := 100; iter < 3300; iter += 500 {
